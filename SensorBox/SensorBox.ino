@@ -73,9 +73,19 @@ void loop() {
                                     
             client.publish("sensor_temperature", s_Temp.c_str());
             client.publish("sensor_humidity", s_Hum.c_str());
-            client.publish("sensor_fire", s_Fire.c_str());
             client.publish("sensor_gas", s_Gas.c_str());
             client.publish("sensor_co", s_CO.c_str());
+            if((int)analogRead(FIREpin)<400){
+              client.publish("fire", "enable");
+              //debug
+              //Serial.print("\nfire enable ");
+              }
+            else{
+              client.publish("fire", "disable");
+              //debug
+              //Serial.print("\nfire disable ");
+            }
+            
             // debug
             Serial.print("\n\n\nTemp = ");
             Serial.print(s_Temp);
