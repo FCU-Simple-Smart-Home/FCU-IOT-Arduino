@@ -18,10 +18,14 @@ MQTT mqtt(&esp);
 
 long previousMillis = 0;
 unsigned long currentMillis = 0;
-const long interval = 5000;
+const long interval = 10000;
+const long bodywait = 70000;
 boolean wifiConnected = false;
+int stateflag = 0;
 
-int lessthanrain = 500;
+int raintemp = 0;
+int bodytemp = 0;
+
 int lessthanlight = 500;
 char* plug_0_status = "status_off";
 
@@ -52,9 +56,6 @@ void mqttConnected(void* response)                                              
 {
   Serial.println("Connected");
   mqtt.subscribe(CHANNEL_PLUG_0); //or mqtt.subscribe("topic"); /*with qos = 0*/
-//  mqtt.subscribe("status");
-
- // mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
 
 }
 
@@ -62,7 +63,8 @@ void mqttDisconnected(void* response)
 {
 
 }
-void mqttData(void* response)
+
+void mqttData(void* response)                                                       //receive message
 {
   RESPONSE res(response);
 
@@ -75,6 +77,7 @@ void mqttData(void* response)
   Serial.println(data);
   callback(topic,data);
 }
+
 void mqttPublished(void* response)
 {
 
@@ -119,30 +122,34 @@ void callback(String topic, String payload) {
 
 
     if (topic.equals(CHANNEL_PLUG_0)) {
-        controlRelay(payload);
+        if (payload.equals("on") ) {
+          plug_0_on();
+          stateflag = 1;
+        }
+        else if (payload.equals("off") ) {
+          plug_0_off();
+          stateflag = 0;
+        }
+        else if(payload.equals("status"))
+        {
+          mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
+        }
     }
    
 }
 
 
 
-void controlRelay(String payload) {
-    if (payload.equals("on") ) {
-       plug_0_on();
-    }
-    else if (payload.equals("off") ) {
-        plug_0_off();
-    }
-     else if(payload.equals("status"))
-    {
-      mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
-    }
-}
 
 boolean rain(){                 //取得是否有下雨 1為有
-  Serial.println("rain : ");
-  int raintemp = digitalRead(PIN_RAIN_D0);
-  Serial.println(raintemp);
+  
+  int rain = digitalRead(PIN_RAIN_D0);
+  if (raintemp != rain ){\
+  //  Serial.println("rain : ");
+    Serial.print(" ");
+    Serial.print(rain);
+    raintemp = rain;
+  }
   if (raintemp == 0 ) //   ||  analogRead(PIN_RAIN_AO) <= lessthanrain
     return true;
   else 
@@ -150,31 +157,44 @@ boolean rain(){                 //取得是否有下雨 1為有
 }
 
 boolean light(){
-  if (digitalRead(PIN_LIGHTSENSOR) <= lessthanlight)
+  if (analogRead(PIN_LIGHTSENSOR) < lessthanlight)
     return true;
   else 
     return false;
 }
 
 void plug_0_on(){
-  digitalWrite(PIN_PLUG_0, HIGH);
-  plug_0_status = "status_on";
-  mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
-  Serial.println("PLUG ON");
+  if ( strcmp(plug_0_status,"status_off") == 0){
+    digitalWrite(PIN_PLUG_0, HIGH);
+    plug_0_status = "status_on";
+    mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
+    Serial.println("PLUG ON");
+  }
 }
 
 void plug_0_off(){
-  digitalWrite(PIN_PLUG_0, LOW);
-  plug_0_status = "status_off";
-  mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
-  Serial.println("PLUG OFF");
+  if ( strcmp(plug_0_status,"status_on") == 0){
+    digitalWrite(PIN_PLUG_0, LOW);
+    plug_0_status = "status_off";
+    mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
+    Serial.println("PLUG OFF");
+  }
 }
 
 boolean body(){
-  Serial.println("BODY : ");
-  Serial.println(digitalRead(PIN_BODY));
-  if (digitalRead(PIN_BODY)  == 1)
-    return true;
+  currentMillis = millis();
+  if (currentMillis  > bodywait){
+    int body = digitalRead(PIN_BODY);
+    if (bodytemp != body){ 
+      Serial.print("BODY : ");
+      Serial.print(body);
+      bodytemp = body;  
+      if (body  == 1)
+        return true;
+      else
+        return false;
+  }
+  }
   else
     return false;
 }
@@ -183,21 +203,13 @@ void loop() {
   esp.process();
   currentMillis = millis();
   if(wifiConnected) {
-      if (rain())
+      if (rain() || body() || light())
       {
         plug_0_on();
       }
-  /*    else if (light())
-      {
-        plug_0_on();
-      }*/
-   //   else if(body())
-  /*    {
-        plug_0_on();
-      }*/
       else 
       {
-        if(currentMillis - previousMillis > interval) 
+        if(currentMillis - previousMillis > interval && stateflag == 0) // && strcmp(plug_0_status,"status_off")  == 0
         {
             previousMillis = currentMillis;
             plug_0_off();
