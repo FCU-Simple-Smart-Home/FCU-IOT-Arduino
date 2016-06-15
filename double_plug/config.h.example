@@ -1,0 +1,15 @@
+// network config
+
+
+/* 
+ * PIN config
+ * 要避開PIN 4、10、50、51、52、53 (Mega 2560)
+ * 要避開PIN 4、10、11、12、13 (UNO)
+ */
+#define PIN_PLUG_0 10
+#define PIN_RAIN_D0 8
+#define PIN_LIGHTSENSOR 99
+#define PIN_BODY 9
+#define CHANNEL_PLUG_0 "plug_0"
+#define PIN_RAIN_AO 77
+
