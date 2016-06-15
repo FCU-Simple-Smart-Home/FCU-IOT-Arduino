@@ -124,10 +124,10 @@ void callback(String topic, String payload) {                  //after receive M
 
 
     if (topic.equals(LED_0)) {
-        ledControlRelay(payload);
+        ledControlRelay(payload , 0);
     }
     else if (topic.equals(LED_1)) {
-        ledControlRelay(payload);
+        ledControlRelay(payload , 1);
     }
    
 }
@@ -136,7 +136,7 @@ void callback(String topic, String payload) {                  //after receive M
 
 void LEDcontrolRelay(String payload , int SWcontrol) {          //LED Number switch
     if (payload.equals("on") ) {
-       plug_0_on();
+       LED_on(SWcontrol);
     }
     else if (payload.equals("off") ) {
         plug_0_off();
@@ -145,6 +145,19 @@ void LEDcontrolRelay(String payload , int SWcontrol) {          //LED Number swi
     {
       mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
     }
+}
+
+void LED_on(int SWcontrol){
+  if(SWcontrol == 0){
+    digitalWrite(PIN_LIGHT_0, HIGH);
+  }
+  else if(SWcontrol == 1){
+    digitalWrite(PIN_LIGHT_0, HIGH);
+  }
+  else
+    Serial.println("!!SWcontrol set on error!!");
+    delay(10000);
+  
 }
 
 void plug_0_on(){
