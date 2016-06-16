@@ -11,9 +11,9 @@
 #include "config.h"
 
 
-SoftwareSerial debugPort(2, 3); // RX, TX
-//ESP esp(&debugPort, &Serial, 4);
-ESP esp(&debugPort, 4);
+SoftwareSerial debugPort(8, 9); // RX, TX
+ESP esp(&debugPort, &Serial, 4);
+//ESP esp(&debugPort, 4);
 MQTT mqtt(&esp);
 
 long previousMillis = 0;
@@ -26,7 +26,9 @@ int lessthanlight = 500;
 char* plug_0_status = "status_off";
 
 
-
+String SensorTemp = "";                                                   //these  for MQTT & Sensor
+char* LED_0_status = "status_off";   
+char* LED_1_status = "status_off";
 
 void wifiCb(void* response)
 {
@@ -51,9 +53,9 @@ void wifiCb(void* response)
 void mqttConnected(void* response)                                                    //subscribe
 {
   Serial.println("Connected");
-  mqtt.subscribe("LED_0"); //or mqtt.subscribe("topic"); /*with qos = 0*/
-  mqtt.subscribe("LED_1");
-  mqtt.subscribe("LED_2");
+  mqtt.subscribe("led_0"); //or mqtt.subscribe("topic"); /*with qos = 0*/
+  mqtt.subscribe("led_1");
+  mqtt.subscribe("led_2");
   mqtt.subscribe("marquee_message");
   mqtt.subscribe("door");
   mqtt.subscribe("sensor_window");
@@ -94,7 +96,7 @@ void setup() {                    //setup
   while(!esp.ready());
 
   Serial.println("ARDUINO: setup mqtt client");
-  if(!mqtt.begin("DVES_duino", "admin", "Isb_C4OGD4c3", 120, 1)) {
+  if(!mqtt.begin("indoor_control", "admin", "Isb_C4OGD4c3", 120, 1)) {
     Serial.println("ARDUINO: fail to setup mqtt");
     while(1);
   }
@@ -113,92 +115,80 @@ void setup() {                    //setup
   Serial.println("ARDUINO: setup wifi");
   esp.wifiCb.attach(&wifiCb);
 
-  esp.wifiConnect("FCU-Auto","");
+  esp.wifiConnect("FCU-Auto","");                                                   //wificonfig
 
 
   Serial.println("ARDUINO: system started");
 }
 
 void callback(String topic, String payload) {                  //after receive MQTT data, find the sensor
-    //debug
-
-
-    if (topic.equals(LED_0)) {
-        ledControlRelay(payload , 0);
+    
+    if(payload=="status") {
+      SensorTemp = sensorStatus(topic);
+      mqtt.publish(topic.c_str(), (char *)SensorTemp.c_str());
     }
-    else if (topic.equals(LED_1)) {
-        ledControlRelay(payload , 1);
+    else{
+      switchStatus(topic,payload);
+      
     }
-   
+    
 }
 
 
-
-void LEDcontrolRelay(String payload , int SWcontrol) {          //LED Number switch
-    if (payload.equals("on") ) {
-       LED_on(SWcontrol);
-    }
-    else if (payload.equals("off") ) {
-        plug_0_off();
-    }
-     else if(payload.equals("status"))
-    {
-      mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
-    }
-}
-
-void LED_on(int SWcontrol){
-  if(SWcontrol == 0){
+void switchStatus(String topic, String payload){                             //switch the status
+  Serial.println("");
+  if(payload == "on"){
+    if(sensorStatus(topic) == "status_on"){
+      Serial.println("already on");}
     digitalWrite(PIN_LIGHT_0, HIGH);
+    LED_0_status = "status_on";
+    mqtt.publish(topic.c_str(), (char *)sensorStatus(topic).c_str());
+    Serial.println("[on] message sent");
+    
   }
-  else if(SWcontrol == 1){
-    digitalWrite(PIN_LIGHT_0, HIGH);
+  else if(payload == "off"){
+    if(sensorStatus(topic) == "status_off"){
+      Serial.println("already off");}
+    digitalWrite(PIN_LIGHT_0, LOW);
+    LED_0_status = "status_off";
+    mqtt.publish(topic.c_str(), (char *)sensorStatus(topic).c_str());
+    Serial.println("[off] message sent");
+    
+  }
+  else if(payload == "status_on"||payload == "status_off"){
+    
   }
   else
-    Serial.println("!!SWcontrol set on error!!");
-    delay(10000);
+    Serial.println("nothing happend");
+    
   
 }
 
-void plug_0_on(){
-  digitalWrite(PIN_PLUG_0, HIGH);
-  plug_0_status = "status_on";
-  mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
-  Serial.println("PLUG ON");
+String sensorStatus(String topic){                       //return Sensor Status
+    if (topic.equals("led_0")) {
+        return LED_0_status;
+    }
+    else if (topic.equals("led_1")) {
+        return LED_1_status;
+    }
+    Serial.println("error");
+    return "error";
 }
 
-void plug_0_off(){
-  digitalWrite(PIN_PLUG_0, LOW);
-  plug_0_status = "status_off";
-  mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
-  Serial.println("PLUG OFF");
-}
 
 boolean body(){
-  Serial.println("BODY : ");
+/*  Serial.println("BODY : ");
   Serial.println(digitalRead(PIN_BODY));
   if (digitalRead(PIN_BODY)  == 1)
     return true;
   else
-    return false;
+    return false;*/
 }
 void loop() {
   esp.process();
-  currentMillis = millis();
+//  currentMillis = millis();
   if(wifiConnected) {
-      if (rain())
-      {
-        plug_0_on();
-      }
- 
-      else 
-      {
-        if(currentMillis - previousMillis > interval) 
-        {
-            previousMillis = currentMillis;
-            plug_0_off();
-        }
-      }
+      
   }
 }
 
