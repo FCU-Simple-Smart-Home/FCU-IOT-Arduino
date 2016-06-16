@@ -12,8 +12,8 @@
 
 
 SoftwareSerial debugPort(8, 9); // RX, TX
-ESP esp(&debugPort, &Serial, 4);
-//ESP esp(&debugPort, 4);
+//ESP esp(&debugPort, &Serial, 4);
+ESP esp(&debugPort, 4);
 MQTT mqtt(&esp);
 
 long previousMillis = 0;
@@ -27,8 +27,10 @@ char* plug_0_status = "status_off";
 
 
 String SensorTemp = "";                                                   //these  for MQTT & Sensor
-char* LED_0_status = "status_off";   
-char* LED_1_status = "status_off";
+String LED_0_status = "status_off";   
+String LED_1_status = "status_off";
+String LED_2_status = "status_off";
+String LEDTemp = "";
 
 void wifiCb(void* response)
 {
@@ -94,6 +96,10 @@ void setup() {                    //setup
   esp.reset();
   delay(500);
   while(!esp.ready());
+  
+  pinMode(PIN_LIGHT_0,OUTPUT);                                               //pinMode declare
+  pinMode(PIN_LIGHT_1,OUTPUT);
+  pinMode(PIN_LIGHT_2,OUTPUT);
 
   Serial.println("ARDUINO: setup mqtt client");
   if(!mqtt.begin("indoor_control", "admin", "Isb_C4OGD4c3", 120, 1)) {
@@ -140,8 +146,8 @@ void switchStatus(String topic, String payload){                             //s
   if(payload == "on"){
     if(sensorStatus(topic) == "status_on"){
       Serial.println("already on");}
-    digitalWrite(PIN_LIGHT_0, HIGH);
-    LED_0_status = "status_on";
+    digitalWrite(getLEDpin(topic), HIGH);
+    setLEDStatuesWithPayload(topic , payload);
     mqtt.publish(topic.c_str(), (char *)sensorStatus(topic).c_str());
     Serial.println("[on] message sent");
     
@@ -149,17 +155,18 @@ void switchStatus(String topic, String payload){                             //s
   else if(payload == "off"){
     if(sensorStatus(topic) == "status_off"){
       Serial.println("already off");}
-    digitalWrite(PIN_LIGHT_0, LOW);
-    LED_0_status = "status_off";
+    digitalWrite(getLEDpin(topic), LOW);
+    setLEDStatuesWithPayload(topic , payload);
     mqtt.publish(topic.c_str(), (char *)sensorStatus(topic).c_str());
     Serial.println("[off] message sent");
     
   }
   else if(payload == "status_on"||payload == "status_off"){
-    
+    //debug & own message
+    Serial.println("receive own message");
   }
   else
-    Serial.println("nothing happend");
+    Serial.println("Nothing happend");
     
   
 }
@@ -171,10 +178,43 @@ String sensorStatus(String topic){                       //return Sensor Status
     else if (topic.equals("led_1")) {
         return LED_1_status;
     }
-    Serial.println("error");
+    else if (topic.equals("led_2")) {
+        return LED_2_status;
+    }
+    Serial.println("Sensor status error");
     return "error";
 }
 
+int getLEDpin(String topic){
+   int LEDpin;
+   if (topic.equals("led_0")) {
+        LEDpin = PIN_LIGHT_0;
+    }
+    else if (topic.equals("led_1")) {
+        LEDpin = PIN_LIGHT_1;
+    }
+    else if (topic.equals("led_2")) {
+        LEDpin = PIN_LIGHT_2;
+    }
+  return LEDpin;
+}
+
+void setLEDStatuesWithPayload(String topic , String payload){
+    String s = "";
+    s = "status_";
+    s += payload;
+    if (topic.equals("led_0")) {
+        LED_0_status = s;
+    }
+    else if (topic.equals("led_1")) {
+        LED_1_status = s;
+    }
+    else if (topic.equals("led_2")) {
+        LED_2_status = s;
+    }
+    else 
+      Serial.println("Set status error");  
+}
 
 boolean body(){
 /*  Serial.println("BODY : ");
