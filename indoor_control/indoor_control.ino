@@ -9,22 +9,28 @@
 #include <espduino.h>
 #include <mqtt.h>
 #include "config.h"
-
+#include "QueueArray.h"
 
 SoftwareSerial debugPort(8, 9); // RX, TX
-//ESP esp(&debugPort, &Serial, 4);
+//ESP esp(&debugPort, &Serial, 4);                                              //debug mode here
 ESP esp(&debugPort, 4);
 MQTT mqtt(&esp);
+
 
 long previousMillis = 0;
 unsigned long currentMillis = 0;
 const long interval = 5000;
 boolean wifiConnected = false;
 
-int lessthanrain = 500;
-int lessthanlight = 500;
-char* plug_0_status = "status_off";
+int body_status_0 = 0;
+int body_status_1 = 0;
+char* body_status_en = "enable";                                         //these are char* for MQTT publish
+char* body_status_dis = "disable";
+char* body_channel_0 = "sensor_human_infrared_0";
+char* body_channel_1 = "sensor_human_infrared_1";
 
+QueueArray<String> Queue_topic;                                           //Queue
+QueueArray<String> Queue_payload;
 
 String SensorTemp = "";                                                   //these  for MQTT & Sensor
 String LED_0_status = "status_off";   
@@ -58,12 +64,6 @@ void mqttConnected(void* response)                                              
   mqtt.subscribe("led_0"); //or mqtt.subscribe("topic"); /*with qos = 0*/
   mqtt.subscribe("led_1");
   mqtt.subscribe("led_2");
-  mqtt.subscribe("marquee_message");
-  mqtt.subscribe("door");
-  mqtt.subscribe("sensor_window");
-//  mqtt.subscribe("status");
-
- // mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
 
 }
 
@@ -101,6 +101,10 @@ void setup() {                    //setup
   pinMode(PIN_LIGHT_1,OUTPUT);
   pinMode(PIN_LIGHT_2,OUTPUT);
 
+  digitalWrite(PIN_LIGHT_0, HIGH);
+  digitalWrite(PIN_LIGHT_1, HIGH);
+  digitalWrite(PIN_LIGHT_2, HIGH);
+  
   Serial.println("ARDUINO: setup mqtt client");
   if(!mqtt.begin("indoor_control", "admin", "Isb_C4OGD4c3", 120, 1)) {
     Serial.println("ARDUINO: fail to setup mqtt");
@@ -127,35 +131,57 @@ void setup() {                    //setup
   Serial.println("ARDUINO: system started");
 }
 
-void callback(String topic, String payload) {                  //after receive MQTT data, find the sensor
-    
-    if(payload=="status") {
+void callback(String topic, String payload) {                                //after receive MQTT data, find the sensor
+    /*
+    if(payload.equals("status")) {
       SensorTemp = sensorStatus(topic);
-      mqtt.publish(topic.c_str(), (char *)SensorTemp.c_str());
+
+      Queue_topic.push(topic);
+      Queue_payload.push(payload);
+      
+      //mqtt.publish(topic.c_str(), (char *)SensorTemp.c_str());
     }
     else{
       switchStatus(topic,payload);
       
     }
+    */
     
+   Serial.print(topic); Serial.println(" message sent"); 
+   Queue_topic.push(topic);
+   Serial.print(payload); Serial.println(" message sent"); 
+   Queue_payload.push(payload);
+   
+}
+
+void pubData(String topic, String payload) {                                     //pubData
+  if(payload.equals("status")) {
+      SensorTemp = sensorStatus(topic);
+      //mqtt.publish(topic.c_str(), (char *)SensorTemp.c_str());
+    }
+    else{
+      switchStatus(topic,payload);
+      
+    }
 }
 
 
-void switchStatus(String topic, String payload){                             //switch the status
+void switchStatus(String topic, String payload){                             //switch the status & send message
   Serial.println("");
-  if(payload == "on"){
+ // Serial.print("!!!");Serial.println(payload);Serial.print("!!!");
+  if(payload.equals("on")){
     if(sensorStatus(topic) == "status_on"){
       Serial.println("already on");}
-    digitalWrite(getLEDpin(topic), HIGH);
+    digitalWrite(getLEDpin(topic), LOW);
     setLEDStatuesWithPayload(topic , payload);
     mqtt.publish(topic.c_str(), (char *)sensorStatus(topic).c_str());
     Serial.println("[on] message sent");
     
   }
-  else if(payload == "off"){
+  else if(payload.equals("off")){
     if(sensorStatus(topic) == "status_off"){
       Serial.println("already off");}
-    digitalWrite(getLEDpin(topic), LOW);
+    digitalWrite(getLEDpin(topic), HIGH);
     setLEDStatuesWithPayload(topic , payload);
     mqtt.publish(topic.c_str(), (char *)sensorStatus(topic).c_str());
     Serial.println("[off] message sent");
@@ -163,7 +189,7 @@ void switchStatus(String topic, String payload){                             //s
   }
   else if(payload == "status_on"||payload == "status_off"){
     //debug & own message
-    Serial.println("receive own message");
+    //Serial.println("receive own message");
   }
   else
     Serial.println("Nothing happend");
@@ -181,8 +207,10 @@ String sensorStatus(String topic){                       //return Sensor Status
     else if (topic.equals("led_2")) {
         return LED_2_status;
     }
-    Serial.println("Sensor status error");
-    return "error";
+    else{
+      Serial.println("Sensor status error");
+      return "error";
+    }
 }
 
 int getLEDpin(String topic){
@@ -215,20 +243,66 @@ void setLEDStatuesWithPayload(String topic , String payload){
     else 
       Serial.println("Set status error");  
 }
+/*
+void body_0(){
+  if (digitalRead(PIN_BODY_0)  == 1 && digitalRead(PIN_BODY_0)  != body_status_0){
+    Serial.println("");
+    mqtt.publish(body_channel_0 , body_status_en);
+    Serial.println("BODY_0 [enable] message sent");
+    body_status_0 = 1;
+  }
+  else if (digitalRead(PIN_BODY_0)  == 0 && digitalRead(PIN_BODY_0)  != body_status_0){
+    Serial.println("");
+    mqtt.publish(body_channel_0 , body_status_dis);
+    Serial.println("BODY_0 [disable] message sent");
+    body_status_0 = 0;
+  }
+  else if(digitalRead(PIN_BODY_0)  == body_status_0){
 
-boolean body(){
-/*  Serial.println("BODY : ");
-  Serial.println(digitalRead(PIN_BODY));
-  if (digitalRead(PIN_BODY)  == 1)
-    return true;
-  else
-    return false;*/
+  }
+  else{
+    Serial.println("Something wrong of [body_0] occured ");
+  }
 }
+void body_1(){
+  if (digitalRead(PIN_BODY_1)  == 1 && digitalRead(PIN_BODY_1)  != body_status_1){
+    Serial.println("");
+    mqtt.publish(body_channel_1 , body_status_en);
+    Serial.println("BODY_1 [enable] message sent");
+    body_status_1 = 1;
+  }
+  else if (digitalRead(PIN_BODY_1)  == 0 && digitalRead(PIN_BODY_1)  != body_status_1){
+    Serial.println("");
+    mqtt.publish(body_channel_1 , body_status_dis);
+    Serial.println("BODY_1 [disable] message sent");
+    body_status_1 = 0;
+  }
+  else if(digitalRead(PIN_BODY_1)  == body_status_1){
+
+  }
+  else{
+    Serial.println("Something wrong of [body_1] occured ");
+  }
+}
+
+*/
+/*
+void pubData(String topic , String payload){
+  mqtt.publish(topic.c_str(), (char *)SensorTemp.c_str());
+  
+}
+*/
+
 void loop() {
   esp.process();
 //  currentMillis = millis();
   if(wifiConnected) {
-      
+    while(Queue_topic.isEmpty()!=true){
+      Serial.println("Send Data");
+      pubData(Queue_topic.pop() , Queue_payload.pop());
+    }
+      //body_0();
+      //body_1();
   }
 }
 
