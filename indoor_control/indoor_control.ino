@@ -9,11 +9,11 @@
 #include <espduino.h>
 #include <mqtt.h>
 #include "config.h"
-#include "QueueArray.h"
+#include "QueueList.h"
 
-SoftwareSerial debugPort(8, 9); // RX, TX
-//ESP esp(&debugPort, &Serial, 4);                                              //debug mode here
-ESP esp(&debugPort, 4);
+SoftwareSerial debugPort(13,14); // RX, TX
+ESP esp(&debugPort, &Serial, 4);                                              //debug mode here
+//ESP esp(&debugPort, 4);
 MQTT mqtt(&esp);
 
 
@@ -22,6 +22,7 @@ unsigned long currentMillis = 0;
 const long interval = 5000;
 boolean wifiConnected = false;
 
+String tTemp ,  pTemp;
 int body_status_0 = 0;
 int body_status_1 = 0;
 char* body_status_en = "enable";                                         //these are char* for MQTT publish
@@ -29,8 +30,8 @@ char* body_status_dis = "disable";
 char* body_channel_0 = "sensor_human_infrared_0";
 char* body_channel_1 = "sensor_human_infrared_1";
 
-QueueArray<String> Queue_topic;                                           //Queue
-QueueArray<String> Queue_payload;
+QueueList<String> Queue_topic;                                           //Queue
+QueueList<String> Queue_payload;
 
 String SensorTemp = "";                                                   //these  for MQTT & Sensor
 String LED_0_status = "status_off";   
@@ -82,7 +83,13 @@ void mqttData(void* response)                                   //receive MQTT d
   Serial.print("data=");
   String data = res.popString();
   Serial.println(data);
-  callback(topic,data);
+  //callback(topic, data);                                                  //DO NOT use callback
+
+  // push all the message's characters to the queue.
+   Serial.println(topic); Serial.println(" receive topic! "); 
+   Queue_topic.push(topic);
+   Serial.println(data); Serial.println(" receive payload! "); 
+   Queue_payload.push(data);
 }
 void mqttPublished(void* response)
 {
@@ -126,32 +133,9 @@ void setup() {                    //setup
   esp.wifiCb.attach(&wifiCb);
 
   esp.wifiConnect("FCU-Auto","");                                                   //wificonfig
-
+ // esp.wifiConnect("Catsith","");
 
   Serial.println("ARDUINO: system started");
-}
-
-void callback(String topic, String payload) {                                //after receive MQTT data, find the sensor
-    /*
-    if(payload.equals("status")) {
-      SensorTemp = sensorStatus(topic);
-
-      Queue_topic.push(topic);
-      Queue_payload.push(payload);
-      
-      //mqtt.publish(topic.c_str(), (char *)SensorTemp.c_str());
-    }
-    else{
-      switchStatus(topic,payload);
-      
-    }
-    */
-    
-   Serial.print(topic); Serial.println(" message sent"); 
-   Queue_topic.push(topic);
-   Serial.print(payload); Serial.println(" message sent"); 
-   Queue_payload.push(payload);
-   
 }
 
 void pubData(String topic, String payload) {                                     //pubData
@@ -292,18 +276,22 @@ void pubData(String topic , String payload){
   
 }
 */
-
 void loop() {
   esp.process();
 //  currentMillis = millis();
   if(wifiConnected) {
     while(Queue_topic.isEmpty()!=true){
-      Serial.println("Send Data");
-      pubData(Queue_topic.pop() , Queue_payload.pop());
+      Serial.println("\n!Send Data!");
+      tTemp ,  pTemp;
+      tTemp = Queue_topic.pop();
+      pTemp = Queue_payload.pop();
+      Serial.print(tTemp); Serial.print(pTemp);
+      pubData(tTemp, pTemp);
     }
       //body_0();
       //body_1();
   }
+
 }
 
 
