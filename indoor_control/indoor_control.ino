@@ -88,8 +88,12 @@ void mqttData(void* response)                                   //receive MQTT d
   // push all the message's characters to the queue.
    Serial.println(topic); Serial.println(" receive topic! "); 
    Queue_topic.push(topic);
+   tTemp = Queue_topic.pop();
+   Serial.println(tTemp); Serial.println("!!! receive topic test!!!\n ");   
    Serial.println(data); Serial.println(" receive payload! "); 
    Queue_payload.push(data);
+   pTemp = Queue_payload.pop();
+   Serial.println(pTemp); Serial.println("!!! receive payload test!!!\n "); 
 }
 void mqttPublished(void* response)
 {
