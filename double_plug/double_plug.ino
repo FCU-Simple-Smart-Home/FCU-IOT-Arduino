@@ -12,22 +12,9 @@
 
 
 SoftwareSerial debugPort(2, 3); // RX, TX
-//ESP esp(&debugPort, &Serial, 4);
-ESP esp(&debugPort, 4);
+ESP esp(&debugPort, &Serial, 4);
+//ESP esp(&debugPort, 4);
 MQTT mqtt(&esp);
-
-long previousMillis = 0;
-unsigned long currentMillis = 0;
-const long interval = 10000;
-const long bodywait = 70000;
-boolean wifiConnected = false;
-int stateflag = 0;
-
-int raintemp = 0;
-int bodytemp = 0;
-
-int lessthanlight = 500;
-char* plug_0_status = "status_off";
 
 
 
@@ -56,7 +43,7 @@ void mqttConnected(void* response)                                              
 {
   Serial.println("Connected");
   mqtt.subscribe(CHANNEL_PLUG_0); //or mqtt.subscribe("topic"); /*with qos = 0*/
-
+  mqtt.subscribe(CHANNEL_PLUG_1); 
 }
 
 void mqttDisconnected(void* response)
@@ -89,10 +76,12 @@ void setup() {
   delay(500);
   esp.reset();
   delay(500);
+  pinMode(PIN_PLUG_0, OUTPUT);
+  pinMode(PIN_PLUG_1, OUTPUT);
   while(!esp.ready());
 
   Serial.println("ARDUINO: setup mqtt client");
-  if(!mqtt.begin("DVES_duino", "admin", "Isb_C4OGD4c3", 120, 1)) {
+  if(!mqtt.begin("double_plug", "admin", "Isb_C4OGD4c3", 120, 1)) {
     Serial.println("ARDUINO: fail to setup mqtt");
     while(1);
   }
@@ -123,16 +112,28 @@ void callback(String topic, String payload) {
 
     if (topic.equals(CHANNEL_PLUG_0)) {
         if (payload.equals("on") ) {
-          plug_0_on();
+          plug_on(0);
           stateflag = 1;
         }
         else if (payload.equals("off") ) {
-          plug_0_off();
+          plug_off(0);
           stateflag = 0;
         }
         else if(payload.equals("status"))
         {
           mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
+        }
+    }
+    else if (topic.equals(CHANNEL_PLUG_1)) {
+        if (payload.equals("on") ) {
+          plug_on(1);
+        }
+        else if (payload.equals("off") ) {
+          plug_off(1);
+        }
+        else if(payload.equals("status"))
+        {
+          mqtt.publish(CHANNEL_PLUG_1, plug_1_status);
         }
     }
    
@@ -163,22 +164,54 @@ boolean light(){
     return false;
 }
 
-void plug_0_on(){
-  if ( strcmp(plug_0_status,"status_off") == 0){
-    digitalWrite(PIN_PLUG_0, HIGH);
-    plug_0_status = "status_on";
-    mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
-    Serial.println("PLUG ON");
-  }
+boolean window(){
+  if (digitalRead(PIN_WINDOW) == 0)
+    return true;
+  else 
+    return false;
 }
 
-void plug_0_off(){
-  if ( strcmp(plug_0_status,"status_on") == 0){
-    digitalWrite(PIN_PLUG_0, LOW);
-    plug_0_status = "status_off";
-    mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
-    Serial.println("PLUG OFF");
+void plug_on(int number){
+  if (number == 0)
+  {
+    if ( strcmp(plug_0_status,"status_off") == 0){
+      digitalWrite(PIN_PLUG_0, HIGH);
+      plug_0_status = "status_on";
+      mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
+      Serial.println("PLUG1 ON");
+    }
   }
+  else if (number == 1)
+  {
+    if ( strcmp(plug_1_status,"status_off") == 0){
+      digitalWrite(PIN_PLUG_1, HIGH);
+      plug_1_status = "status_on";
+      mqtt.publish(CHANNEL_PLUG_1, plug_1_status);
+      Serial.println("PLUG2 ON");
+    }
+  }
+  
+}
+
+void plug_off(int number){
+  if (number == 0)
+  {
+    if ( strcmp(plug_0_status,"status_on") == 0){
+      digitalWrite(PIN_PLUG_0, LOW);
+      plug_0_status = "status_off";
+      mqtt.publish(CHANNEL_PLUG_0, plug_0_status);
+      Serial.println("PLUG1 OFF");
+    }
+  }
+   else if (number == 1)
+    {
+      if ( strcmp(plug_1_status,"status_on") == 0){
+        digitalWrite(PIN_PLUG_1, LOW);
+        plug_1_status = "status_off";
+        mqtt.publish(CHANNEL_PLUG_1, plug_1_status);
+        Serial.println("PLUG2 OFF");
+      }
+   }
 }
 
 boolean body(){
@@ -203,16 +236,17 @@ void loop() {
   esp.process();
   currentMillis = millis();
   if(wifiConnected) {
-      if (rain() || body() || light())
+   
+      if (window() ||  rain() || body() || light() )
       {
-        plug_0_on();
+        plug_on(0);
       }
       else 
-      {
+      { 
         if(currentMillis - previousMillis > interval && stateflag == 0) // && strcmp(plug_0_status,"status_off")  == 0
         {
             previousMillis = currentMillis;
-            plug_0_off();
+            plug_off(0);
         }
       }
   }

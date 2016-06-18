@@ -1,11 +1,31 @@
 // network config
 
 
-
+/* 
+ * PIN config
+ * 要避開PIN 4、10、50、51、52、53 (Mega 2560)
+ * 要避開PIN 4、10、11、12、13 (UNO)
+ */
 #define PIN_PLUG_0 10
+#define PIN_PLUG_1 11
 #define PIN_RAIN_D0 8
-#define PIN_LIGHTSENSOR 99
+#define PIN_LIGHTSENSOR A0
 #define PIN_BODY 9
 #define CHANNEL_PLUG_0 "plug_0"
+#define CHANNEL_PLUG_1 "plug_1"
 #define PIN_RAIN_AO 77
+#define PIN_WINDOW 12
+long previousMillis = 0;
+unsigned long currentMillis = 0;
+const long interval = 10000;
+const long bodywait = 70000;
+boolean wifiConnected = false;
+int stateflag = 0;
+
+int raintemp = 0;
+int bodytemp = 0;
+
+int lessthanlight = 500;
+char* plug_0_status = "status_off";
+char* plug_1_status = "status_off";
 
