@@ -1,5 +1,5 @@
 # 硬體
-Android Yun
+Android MEGA2560
 
 # Library
 * MaxMatrix (https://github.com/riyas-org/max7219)
