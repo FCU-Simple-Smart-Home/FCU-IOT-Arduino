@@ -153,6 +153,9 @@ void callback(String topic, String payload) {                  //after receive M
     //debug
   if (topic.equals(CHANNEL_MESSAGE)   ) 
   {
+    nowelement = 0;
+    delay(100);
+    m.shiftLeft(false, false);
     havemessage = true;
     strcpy(MESSAGE, payload.c_str());
     Serial.println(MESSAGE);
@@ -192,6 +195,8 @@ void loop() {
       havemessage = false;
       Serial.println("hasmessage end");
       previousMillis = millis();
+      delay(100);
+      m.shiftLeft(false, false);
     }
 
     if (nowbuf < buffer[0]+1)
@@ -268,10 +273,10 @@ void loop() {
          // delay(100);
           m.shiftLeft(false, false);
           nowbuf ++;
-          Serial.print(nowbuf);
+          /*Serial.print(nowbuf);
           Serial.print(" ?= ");
           Serial.print(buffer[0]+1);
-          Serial.println( );
+          Serial.println( );*/
           leftpreviousMillis = millis();
         }
       }
