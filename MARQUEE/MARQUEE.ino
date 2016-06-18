@@ -206,10 +206,6 @@ void loop() {
          // delay(100);
           m.shiftLeft(false, false);
           nowbuf ++;
-        /*  Serial.print(nowbuf);
-          Serial.print(" ?= ");
-          Serial.print(buffer[0]+1);
-          Serial.println( );*/
           leftpreviousMillis = millis();
         }
       }
@@ -324,10 +320,6 @@ void loop() {
          // delay(100);
           m.shiftLeft(false, false);
           nowbuf ++;
-        /*  Serial.print("tmpebuf:");
-          Serial.print(" ?= ");
-          Serial.print(buffer[0]+1);
-          Serial.println( );*/
           leftpreviousMillis = millis();
         }
       }
