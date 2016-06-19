@@ -44,6 +44,8 @@ void mqttConnected(void* response)                                              
   Serial.println("Connected");
   mqtt.subscribe(CHANNEL_PLUG_0); //or mqtt.subscribe("topic"); /*with qos = 0*/
   mqtt.subscribe(CHANNEL_PLUG_1); 
+  mqtt.subscribe(CHANNEL_WINDOW);
+  mqtt.subscribe(CHANNEL_STATUS);
 }
 
 void mqttDisconnected(void* response)
@@ -81,7 +83,7 @@ void setup() {
   while(!esp.ready());
 
   Serial.println("ARDUINO: setup mqtt client");
-  if(!mqtt.begin("double_plug", "admin", "Isb_C4OGD4c3", 120, 1)) {
+  if(!mqtt.begin(ID, "admin", "Isb_C4OGD4c3", 120, 1)) {
     Serial.println("ARDUINO: fail to setup mqtt");
     while(1);
   }
@@ -136,6 +138,13 @@ void callback(String topic, String payload) {
           mqtt.publish(CHANNEL_PLUG_1, plug_1_status);
         }
     }
+  else if (topic.equals(CHANNEL_STATUS))
+  {
+    if (payload.equals("status"))
+    {
+      mqtt.publish(CHANNEL_STATUS, ID);
+    }
+  }
    
 }
 
@@ -159,16 +168,38 @@ boolean rain(){                 //取得是否有下雨 1為有
 
 boolean light(){
   if (analogRead(PIN_LIGHTSENSOR) < lessthanlight)
+  {
+    Serial.println("light");
     return true;
+  }
   else 
     return false;
 }
 
 boolean window(){
-  if (digitalRead(PIN_WINDOW) == 0)
-    return true;
-  else 
-    return false;
+  if (currentMillis - windowmillis > 2000)
+  {
+    if (digitalRead(PIN_WINDOW) == 0)
+    {
+      if (strcmp(window_status,"enable") != 0)
+      { 
+        window_status = "enable";
+        Serial.println(window_status);
+        mqtt.publish(CHANNEL_WINDOW, window_status);
+        return true;
+      }
+    }
+    else 
+    {
+      if (strcmp(window_status,"disable") != 0 )
+      {
+        window_status = "disable";
+        mqtt.publish(CHANNEL_WINDOW, window_status);
+        return false;
+      }
+    }
+    windowmillis  = millis();
+  }
 }
 
 void plug_on(int number){
@@ -236,10 +267,11 @@ void loop() {
   esp.process();
   currentMillis = millis();
   if(wifiConnected) {
-   
-      if (window() ||  rain() || body() || light() )
+      window();
+      if (  rain() || body() || light() )
       {
         plug_on(0);
+        previousMillis = currentMillis;
       }
       else 
       { 

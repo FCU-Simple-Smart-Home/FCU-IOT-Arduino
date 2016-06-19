@@ -52,3 +52,4 @@ SensorBox/config.h
 double_plug/config.h
 MARQUEE/config.h
 motor/config.h
+MARQUEE_AND_DOOR/config.h
