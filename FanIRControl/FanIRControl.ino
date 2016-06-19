@@ -11,8 +11,12 @@ SoftwareSerial debugPort(6, 7); // RX, TX
 ESP esp(&debugPort, &Serial, 4);
 MQTT mqtt(&esp);
 boolean wifiConnected = false;
+#define CLIENT_ID "g_paint_control"
 
 QueueList<String> queue_command;
+
+QueueList<String> queue_topic;
+QueueList<String> queue_data;
 
 void wifiCb(void* response) {
     uint32_t status;
@@ -34,6 +38,7 @@ void wifiCb(void* response) {
 
 void mqttConnected(void* response) {
     Serial.println("Connected");
+    mqtt.subscribe("clients_status");
     mqtt.subscribe("fan_ir_command");
 }
 
@@ -51,7 +56,11 @@ void mqttData(void* response) {
     String data = res.popString();
     Serial.println(data);
 
-    if (topic == "fan_ir_command") {
+    if (topic == "clients_status" && data == "status") {
+        queue_topic.push("clients_status");
+        queue_data.push(CLIENT_ID);
+    }
+    else if (topic == "fan_ir_command") {
         queue_command.push(data);
     }
 }
@@ -70,7 +79,7 @@ void setup() {
     while(!esp.ready());
 
     Serial.println("ARDUINO: setup mqtt client");
-    if(!mqtt.begin("g_paint_control", "admin", "Isb_C4OGD4c3", 120, 1)) {
+    if(!mqtt.begin(CLIENT_ID, "admin", "Isb_C4OGD4c3", 120, 1)) {
         Serial.println("ARDUINO: fail to setup mqtt");
         while(1);
     }
@@ -96,6 +105,11 @@ void setup() {
 void loop() {
     esp.process();
     if(wifiConnected) {
+        while (!queue_topic.isEmpty()) {
+            String topic = queue_topic.pop();
+            String data = queue_data.pop();
+            mqtt.publish((char *)topic.c_str(), (char *)data.c_str());
+        }
         while (!queue_command.isEmpty()) {
             String data = queue_command.pop();
             if (data == "steering") {
