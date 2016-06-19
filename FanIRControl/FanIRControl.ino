@@ -70,7 +70,7 @@ void setup() {
     while(!esp.ready());
 
     Serial.println("ARDUINO: setup mqtt client");
-    if(!mqtt.begin("DVES_duino", "admin", "Isb_C4OGD4c3", 120, 1)) {
+    if(!mqtt.begin("g_paint_control", "admin", "Isb_C4OGD4c3", 120, 1)) {
         Serial.println("ARDUINO: fail to setup mqtt");
         while(1);
     }
