@@ -75,6 +75,7 @@ void mqttConnected(void* response)                                              
   mqtt.subscribe(CHANNEL_TEMPERATURE);
   mqtt.subscribe(CHANNEL_MESSAGE);
   mqtt.subscribe("door"); 
+  mqtt.subscribe(CHANNEL_STATUS);
   
 }
 void mqttDisconnected(void* response)
@@ -189,6 +190,13 @@ void callback(String topic, String payload) {                  //after receive M
       mqtt.publish(CHANNEL_DOOR,door_status );
     }
     }
+  else if (topic.equals(CHANNEL_STATUS))
+  {
+    if (payload.equals("status"))
+    {
+      mqtt.publish(CHANNEL_STATUS, ID);
+    }
+  }
            
 }
 
@@ -224,7 +232,7 @@ void loop() {
     if (currentMillis - motorpreviousMillis > 15)
      {
      // delay(15);
-       if ( pos <= 180 )
+       if ( pos <= 120 )
        {
         myservo.write(pos);
         pos++   ;       
