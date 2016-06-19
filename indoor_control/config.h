@@ -8,3 +8,5 @@
 
 #define PIN_DOOR_0 12
 
+#define CHANNEL_STATUS "clients_status"
+#define ID "indoor_control"

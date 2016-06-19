@@ -56,6 +56,7 @@ void mqttConnected(void* response) {                                         //s
     mqtt.subscribe("led_0"); 
     mqtt.subscribe("led_1");
     mqtt.subscribe("led_2");
+    mqtt.subscribe(CHANNEL_STATUS);
 }
 
 void mqttDisconnected(void* response)
@@ -101,6 +102,13 @@ void handleMqtt(String topic, String data) {
             }
         }
     }
+    else if (topic.equals(CHANNEL_STATUS))
+  {
+    if (data.equals("status"))
+    {
+      mqtt.publish(CHANNEL_STATUS, ID);
+    }
+  }
  
 }
 
@@ -207,6 +215,7 @@ void loop() {
             Serial.print("\n!send topic : "); Serial.println(topic);
             Serial.print("!send payload: "); Serial.println(payload);
             mqtt.publish((char *)topic.c_str(), (char *)payload.c_str());
+            
         }
         body_0();
         body_1();
