@@ -10,9 +10,9 @@
 #include <QueueList.h>
 #include "config.h"
 
-SoftwareSerial debugPort(2, 3); // RX, TX
-ESP esp(&debugPort, &Serial, 4); //debug mode here
-//ESP esp(&debugPort, 4);
+SoftwareSerial debugPort(12, 13); // RX, TX
+//ESP esp(&debugPort, &Serial, 4); //debug mode here
+ESP esp(&debugPort, 4);
 MQTT mqtt(&esp);
 
 boolean wifiConnected = false;
@@ -22,6 +22,13 @@ QueueList<String> queue_payload;
 
 int pin_no_leds[3] = {PIN_LIGHT_0, PIN_LIGHT_1, PIN_LIGHT_2};
 bool status_leds[3] = {false, false, false};
+
+int body_status_0 = 0;
+int body_status_1 = 0;
+char* body_status_en = "enable";                                         //these are char* for MQTT publish
+char* body_status_dis = "disable";
+char* body_channel_0 = "sensor_human_infrared_0";
+char* body_channel_1 = "sensor_human_infrared_1";
 
 void wifiCb(void* response)
 {
@@ -43,7 +50,7 @@ void wifiCb(void* response)
   }
 }
 
-void mqttConnected(void* response) {
+void mqttConnected(void* response) {                                         //subscribe
     //subscribe
     Serial.println("Connected");
     mqtt.subscribe("led_0"); 
@@ -55,8 +62,9 @@ void mqttDisconnected(void* response)
 {
 
 }
-//receive MQTT data here
-void mqttData(void* response)                                   
+
+                             
+void mqttData(void* response)                                                   //receive MQTT data here
 {
     RESPONSE res(response);
     
@@ -148,14 +156,60 @@ void setup() {
     Serial.println("ARDUINO: system started");
 }
 
+void body_0(){
+  if (digitalRead(PIN_BODY_0)  == 1 && digitalRead(PIN_BODY_0)  != body_status_0){
+    Serial.println("");
+    mqtt.publish(body_channel_0 , body_status_en);
+    Serial.println("BODY_0 [enable] message sent");
+    body_status_0 = 1;
+  }
+  else if (digitalRead(PIN_BODY_0)  == 0 && digitalRead(PIN_BODY_0)  != body_status_0){
+    Serial.println("");
+    mqtt.publish(body_channel_0 , body_status_dis);
+    Serial.println("BODY_0 [disable] message sent");
+    body_status_0 = 0;
+  }
+  else if(digitalRead(PIN_BODY_0)  == body_status_0){
+
+  }
+  else{
+    Serial.println("Something wrong of [body_0] occured ");
+  }
+}
+void body_1(){
+  if (digitalRead(PIN_BODY_1)  == 1 && digitalRead(PIN_BODY_1)  != body_status_1){
+    Serial.println("");
+    mqtt.publish(body_channel_1 , body_status_en);
+    Serial.println("BODY_1 [enable] message sent");
+    body_status_1 = 1;
+  }
+  else if (digitalRead(PIN_BODY_1)  == 0 && digitalRead(PIN_BODY_1)  != body_status_1){
+    Serial.println("");
+    mqtt.publish(body_channel_1 , body_status_dis);
+    Serial.println("BODY_1 [disable] message sent");
+    body_status_1 = 0;
+  }
+  else if(digitalRead(PIN_BODY_1)  == body_status_1){
+
+  }
+  else{
+    Serial.println("Something wrong of [body_1] occured ");
+  }
+}
+
+
 void loop() {
     esp.process();
     if(wifiConnected) {
         while(!queue_topic.isEmpty()) {
             String topic = queue_topic.pop();
             String payload = queue_payload.pop();
+            Serial.print("\n!send topic : "); Serial.println(topic);
+            Serial.print("!send payload: "); Serial.println(payload);
             mqtt.publish((char *)topic.c_str(), (char *)payload.c_str());
         }
+        body_0();
+        body_1();
     }
 }
 
