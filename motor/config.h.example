@@ -1,0 +1,32 @@
+// network config
+
+
+/* 
+ * PIN config
+ * 要避開PIN 4、10、50、51、52、53 (Mega 2560)
+ * 要避開PIN 4、10、11、12、13 (UNO)
+ */
+
+#define CHANNEL_DOOR "door"
+char* door_status = "status_off";
+
+
+int pos = 0;
+long leftpreviousMillis = 0;
+unsigned long scrollMillis = 0;
+int nowelement = 0;
+boolean opendoor = false;
+
+long previousMillis = 0;
+unsigned long currentMillis = 0;
+const long interval = 10000;
+const long bodywait = 70000;
+boolean wifiConnected = false;
+int stateflag = 0;
+
+int raintemp = 0;
+int bodytemp = 0;
+
+int lessthanlight = 500;
+
+

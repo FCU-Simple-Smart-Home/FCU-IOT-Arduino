@@ -51,3 +51,4 @@ MQTTcontrolNode/config.h
 SensorBox/config.h
 double_plug/config.h
 MARQUEE/config.h
+motor/config.h
