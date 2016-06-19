@@ -13,9 +13,13 @@
 #define PIN_BODY 9
 #define CHANNEL_PLUG_0 "plug_0"
 #define CHANNEL_PLUG_1 "plug_1"
+#define CHANNEL_WINDOW "window_detect"
 #define PIN_RAIN_AO 77
 #define PIN_WINDOW 12
+#define ID "double_plug"
+#define CHANNEL_STATUS "clients_status"
 long previousMillis = 0;
+long windowmillis = -3000;
 unsigned long currentMillis = 0;
 const long interval = 10000;
 const long bodywait = 70000;
@@ -25,7 +29,7 @@ int stateflag = 0;
 int raintemp = 0;
 int bodytemp = 0;
 
-int lessthanlight = 500;
+int lessthanlight = 50;
 char* plug_0_status = "status_off";
 char* plug_1_status = "status_off";
-
+char* window_status = "disble";
