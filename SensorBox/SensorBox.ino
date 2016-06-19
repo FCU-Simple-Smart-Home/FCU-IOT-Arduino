@@ -3,17 +3,11 @@
 #include <PubSubClient.h>
 #include "config.h"
 
-#define CHANNEL_LIGHT_0 "light_0"
-#define CHANNEL_LIGHT_1 "light_1"
-#define CHANNEL_LIGHT_2 "light_2"
-#define CHANNEL_DOOR_0  "door_0"
-#define CHANNEL_AIR_CONDITIONING_0 "air_conditioning_0"
-#define CHANNEL_INFRARED_TRANSMITTER_0 "infrared_transmitter_0"
+#define CLIENT_ID "sensor_box"
 
 void subscribeChannel();
 void callback(char* topic, byte* payload, unsigned int length);
 void printReceiveData(char* topic, byte* payload, unsigned int length);
-void controlRelay(const int pin_number, byte* payload);
 void infraredTransmitter(byte* payload);
 
 YunClient yun;
@@ -28,28 +22,15 @@ void setup() {
     
     // Allow the hardware to sort itself out
     delay(1500);
-
-    pinMode(PIN_LIGHT_0, OUTPUT);
-    pinMode(PIN_LIGHT_1, OUTPUT);
-    pinMode(PIN_LIGHT_2, OUTPUT);
-    pinMode(PIN_DOOR_0, OUTPUT);
-    pinMode(PIN_AIR_CONDITIONING_0, OUTPUT);
-    
-    digitalWrite(PIN_LIGHT_0, HIGH);
-    digitalWrite(PIN_LIGHT_1, HIGH);
-    digitalWrite(PIN_LIGHT_2, HIGH);
-    digitalWrite(PIN_DOOR_0, HIGH);
-    digitalWrite(PIN_AIR_CONDITIONING_0, HIGH);
-
-    
 }
-  long currentMillis,previousMillis,interval=5000;
-  dht DHT;
 
-  int FIREvalue;
-  int GASvalue;
-  int COvalue;
-  String data;
+long currentMillis,previousMillis,interval=5000;
+dht DHT;
+
+int FIREvalue;
+int GASvalue;
+int COvalue;
+String data;
   
 void loop() {
     
@@ -97,7 +78,6 @@ void loop() {
             Serial.print(s_Hum);
             Serial.print("\nCO = ");
             Serial.print(s_CO);
-            
         }
     }
     else {
@@ -111,7 +91,7 @@ void reconnect() {
     while (!client.connected()) {
         Serial.print("Attempting MQTT connection...");
         // Attempt to connect
-        if (client.connect("arduinoClient")) {
+        if (client.connect(CLIENT_ID)) {
             Serial.println("connected");
             // resubscribe
             subscribeChannel();
@@ -126,35 +106,15 @@ void reconnect() {
 }
 
 void subscribeChannel() {
-    client.subscribe(CHANNEL_LIGHT_0);
-    client.subscribe(CHANNEL_LIGHT_1);
-    client.subscribe(CHANNEL_LIGHT_2);
-    client.subscribe(CHANNEL_DOOR_0);
-    client.subscribe(CHANNEL_AIR_CONDITIONING_0);
-    client.subscribe(CHANNEL_INFRARED_TRANSMITTER_0);
+    client.subscribe("clients_status");
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
     //debug
     printReceiveData(topic, payload, length);
 
-    if (strcmp(topic, CHANNEL_LIGHT_0) == 0) {
-        controlRelay(PIN_LIGHT_0, payload);
-    }
-    else if (strcmp(topic, CHANNEL_LIGHT_1) == 0) {
-        controlRelay(PIN_LIGHT_1, payload);
-    }
-    else if (strcmp(topic, CHANNEL_LIGHT_2) == 0) {
-        controlRelay(PIN_LIGHT_2, payload);
-    }
-    else if (strcmp(topic, CHANNEL_DOOR_0) == 0) {
-        controlRelay(PIN_DOOR_0, payload);
-    }
-    else if (strcmp(topic, CHANNEL_AIR_CONDITIONING_0) == 0) {
-        controlRelay(PIN_AIR_CONDITIONING_0, payload);
-    }
-    else if (strcmp(topic, CHANNEL_INFRARED_TRANSMITTER_0) == 0) {
-      
+    if (strcpy(topic, "clients_status") && length == 6 && memcpy(payload, "status", 6)) {
+        client.publish("clients_status", CLIENT_ID);
     }
 }
 
@@ -166,14 +126,5 @@ void printReceiveData(char* topic, byte* payload, unsigned int length) {
         Serial.print((char)payload[i]);
     }
     Serial.println();
-}
-
-void controlRelay(const int pin_number, byte* payload) {
-    if (memcmp(payload, "on", 2) == 0) {
-        digitalWrite(pin_number, LOW);
-    }
-    else if (memcmp(payload, "off", 3) == 0) {
-        digitalWrite(pin_number, HIGH);
-    }
 }
 
